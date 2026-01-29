@@ -17,25 +17,23 @@ class handler(BaseHTTPRequestHandler):
             
             posts = []
             for item in items:
-                # 各要素のテキストを取得する補助関数
-                def get_text(tag_name):
+                def get_tag_value(tag_name):
                     nodes = item.getElementsByTagName(tag_name)
-                    if nodes and nodes[0].firstChild:
-                        return nodes[0].firstChild.nodeValue
-                    return ""
+                    return nodes[0].firstChild.nodeValue if nodes and nodes[0].firstChild else ""
 
                 posts.append({
-                    "id": get_text("guid"),
-                    "author": get_text("author") or "匿名",
-                    "title": get_text("title") or "(無題)",
-                    "content": get_text("description"),
-                    "date": get_text("pubDate"),
-                    "link": get_text("link")
+                    "title": get_tag_value("title"),
+                    "description": get_tag_value("description"), # 本文・HTML
+                    "link": get_tag_value("link"),
+                    "guid": get_tag_value("guid"),
+                    "pubDate": get_tag_value("pubDate"),
+                    "author": get_tag_value("author"),
+                    "source": get_tag_value("source")
                 })
 
             self.send_response(200)
             self.send_header('Content-type', 'application/json; charset=utf-8')
-            self.send_header('Cache-Control', 'no-cache')
+            self.send_header('Cache-Control', 'no-store')
             self.end_headers()
             self.wfile.write(json.dumps(posts, ensure_ascii=False).encode('utf-8'))
         except Exception as e:
