@@ -10,32 +10,27 @@ class handler(BaseHTTPRequestHandler):
         try:
             req = Request(FEED_URL, headers={'User-Agent': 'Mozilla/5.0'})
             with urlopen(req, timeout=10) as response:
-                dom = xml.dom.minidom.parseString(response.read())
+                xml_data = response.read()
             
-            entries = dom.getElementsByTagName('entry')
+            dom = xml.dom.minidom.parseString(xml_data)
+            items = dom.getElementsByTagName('item')
+            
             posts = []
-            for entry in entries:
-                # 投稿者情報 (author)
-                author_node = entry.getElementsByTagName('author')[0]
-                author_name = author_node.getElementsByTagName('name')[0].firstChild.nodeValue
-                # アイコンURL（Padletのフィードに含まれる場合）
-                try:
-                    icon_url = author_node.getElementsByTagName('uri')[0].firstChild.nodeValue
-                except:
-                    icon_url = "https://padlet.com/favicon.ico"
-
-                # コンテンツ
-                title = entry.getElementsByTagName('title')[0].firstChild.nodeValue if entry.getElementsByTagName('title')[0].firstChild else "無題"
-                content = entry.getElementsByTagName('content')[0].firstChild.nodeValue if entry.getElementsByTagName('content')[0].firstChild else ""
-                updated = entry.getElementsByTagName('updated')[0].firstChild.nodeValue
+            for item in items:
+                # 各要素のテキストを取得する補助関数
+                def get_text(tag_name):
+                    nodes = item.getElementsByTagName(tag_name)
+                    if nodes and nodes[0].firstChild:
+                        return nodes[0].firstChild.nodeValue
+                    return ""
 
                 posts.append({
-                    "id": entry.getElementsByTagName('id')[0].firstChild.nodeValue,
-                    "author": author_name,
-                    "author_icon": icon_url,
-                    "title": title,
-                    "content": content, # HTML形式で入っていることが多い
-                    "updated": updated
+                    "id": get_text("guid"),
+                    "author": get_text("author") or "匿名",
+                    "title": get_text("title") or "(無題)",
+                    "content": get_text("description"),
+                    "date": get_text("pubDate"),
+                    "link": get_text("link")
                 })
 
             self.send_response(200)
